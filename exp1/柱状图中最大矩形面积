@@ -1,0 +1,94 @@
+#include <vector>
+#include <iostream>
+#include <cstdlib>
+#include <ctime>
+
+using namespace std;
+
+int largestRectangleArea(vector<int>& heights) {
+    vector<int> stack;
+    int maxArea = 0;
+    int n = heights.size();
+    
+    for (int i = 0; i < n; ++i) {
+        while (!stack.empty() && heights[i] < heights[stack.back()]) {
+            int height = heights[stack.back()];
+            stack.pop_back();
+            int width = stack.empty() ? i : i - stack.back() - 1;
+            maxArea = max(maxArea, height * width);
+        }
+        stack.push_back(i);
+    }
+    
+    // 处理栈中剩余元素
+    while (!stack.empty()) {
+        int height = heights[stack.back()];
+        stack.pop_back();
+        int width = stack.empty() ? n : n - stack.back() - 1;
+        maxArea = max(maxArea, height * width);
+    }
+    
+    return maxArea;
+}
+
+// 生成随机测试数据（1<=length<=1e5，0<=heights[i]<=1e4）
+vector<int> generateRandomHeights() {
+    int length = rand() % 100000 + 1;  // 长度1~1e5
+    vector<int> heights(length);
+    for (int i = 0; i < length; i++) {
+        heights[i] = rand() % 10001;  // 高度0~1e4
+    }
+    return heights;
+}
+
+// 打印数组内容
+void printArray(vector<int>& arr) {
+    for (int num : arr) {
+        cout << num << " ";
+    }
+    cout << endl;
+}
+
+// 主函数测试
+int main() {
+    srand((unsigned int)time(NULL));  // 程序启动时初始化一次种子
+    cout << "=== 柱状图最大矩形面积测试 ===" << endl;
+    
+    // 示例1测试（LeetCode经典示例）
+    cout << "\n示例1测试：" << endl;
+    vector<int> heights1 = {2, 1, 5, 6, 2, 3};
+    cout << "输入高度数组：";
+    printArray(heights1);
+    cout << "计算结果：" << largestRectangleArea(heights1) << "（预期结果：10）" << endl;
+    
+    // 示例2测试（简单双元素示例）
+    cout << "\n示例2测试：" << endl;
+    vector<int> heights2 = {2, 4};
+    cout << "输入高度数组：";
+    printArray(heights2);
+    cout << "计算结果：" << largestRectangleArea(heights2) << "（预期结果：4）" << endl;
+    
+    // 示例3测试（单元素情况）
+    cout << "\n示例3测试：" << endl;
+    vector<int> heights3 = {5};
+    cout << "输入高度数组：";
+    printArray(heights3);
+    cout << "计算结果：" << largestRectangleArea(heights3) << "（预期结果：5）" << endl;
+    
+    // 示例4测试（递增序列）
+    cout << "\n示例4测试：" << endl;
+    vector<int> heights4 = {1, 2, 3, 4, 5};
+    cout << "输入高度数组：";
+    printArray(heights4);
+    cout << "计算结果：" << largestRectangleArea(heights4) << "（预期结果：9）" << endl;
+    
+    // 随机生成10组数据测试
+    cout << "\n=== 随机10组数据测试 ===" << endl;
+    for (int i = 0; i < 10; i++) {
+        vector<int> randomHeights = generateRandomHeights();
+        cout << "第" << i+1 << "组数据：长度=" << randomHeights.size() 
+             << "，最大矩形面积=" << largestRectangleArea(randomHeights) << endl;
+    }
+    
+    return 0;
+}
