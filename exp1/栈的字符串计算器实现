@@ -1,0 +1,223 @@
+#include <iostream>
+#include <stack>
+#include <string>
+#include <cmath>
+#include <cctype>
+#include <vector>  
+
+using namespace std;
+
+template <typename T>
+class Stack {
+private:
+    vector<T> data;
+public:
+    void push(const T& val) {
+        data.push_back(val);
+    }
+    
+    void pop() {
+        if (!empty()) {
+            data.pop_back();
+        }
+    }
+    
+    T top() const {
+        if (empty()) {
+            throw runtime_error("栈为空，无法获取栈顶元素");
+        }
+        return data.back();
+    }
+    
+    // 判断栈是否为空
+    bool empty() const {
+        return data.empty();
+    }
+    
+    // 获取栈的大小
+    int size() const {
+        return data.size();
+    }
+};
+
+// 获取运算符优先级（参考书上代码4.6）
+int getPriority(char op) {
+    switch (op) {
+        case '(': return 0;
+        case '+':
+        case '-': return 1;
+        case '*':
+        case '/': return 2;
+        default: return -1;  // 无效运算符
+    }
+}
+
+// 计算两个数的运算结果
+double calculate(double num1, double num2, char op) {
+    switch (op) {
+        case '+': return num1 + num2;
+        case '-': return num1 - num2;
+        case '*': return num1 * num2;
+        case '/': 
+            if (fabs(num2) < 1e-6) {
+                throw runtime_error("除数不能为0");
+            }
+            return num1 / num2;
+        default: throw runtime_error("无效运算符");
+    }
+}
+
+// 字符串计算器核心函数
+double stringCalculator(const string& expr) {
+    Stack<double> numStack;    // 存储数字的栈
+    Stack<char> opStack;       // 存储运算符的栈
+    int n = expr.size();
+    int i = 0;
+    
+    while (i < n) {
+        // 1. 跳过空格
+        if (isspace(expr[i])) {
+            i++;
+            continue;
+        }
+        
+        // 2. 处理数字（支持整数和小数）
+        if (isdigit(expr[i]) || expr[i] == '.') {
+            double num = 0.0;
+            // 处理整数部分
+            while (i < n && isdigit(expr[i])) {
+                num = num * 10 + (expr[i] - '0');
+                i++;
+            }
+            // 处理小数部分
+            if (i < n && expr[i] == '.') {
+                i++;
+                double decimal = 0.1;
+                while (i < n && isdigit(expr[i])) {
+                    num += (expr[i] - '0') * decimal;
+                    decimal *= 0.1;
+                    i++;
+                }
+            }
+            numStack.push(num);
+        }
+        
+        // 3. 处理左括号
+        else if (expr[i] == '(') {
+            opStack.push(expr[i]);
+            i++;
+        }
+        
+        // 4. 处理右括号（计算括号内的表达式）
+        else if (expr[i] == ')') {
+            while (!opStack.empty() && opStack.top() != '(') {
+                // 获取运算符和两个数字
+                char op = opStack.top();
+                opStack.pop();
+                
+                if (numStack.size() < 2) {
+                    throw runtime_error("表达式格式错误（数字不足）");
+                }
+                double num2 = numStack.top();
+                numStack.pop();
+                double num1 = numStack.top();
+                numStack.pop();
+                
+                // 计算结果并压入数字栈
+                double res = calculate(num1, num2, op);
+                numStack.push(res);
+            }
+            
+            if (opStack.empty()) {
+                throw runtime_error("表达式格式错误（括号不匹配）");
+            }
+            opStack.pop();  // 弹出左括号
+            i++;
+        }
+        
+        // 5. 处理运算符
+        else if (expr[i] == '+' || expr[i] == '-' || expr[i] == '*' || expr[i] == '/') {
+            // 处理负号（表达式开头或左括号后的负号）
+            if (expr[i] == '-' && (i == 0 || expr[i-1] == '(' || expr[i-1] == '+' || expr[i-1] == '-' || expr[i-1] == '*' || expr[i-1] == '/')) {
+                numStack.push(0.0);  // 补0，将负号转为减0
+            }
+            
+            // 当栈顶运算符优先级高于当前运算符时，先计算栈顶运算
+            while (!opStack.empty() && getPriority(opStack.top()) >= getPriority(expr[i])) {
+                char op = opStack.top();
+                opStack.pop();
+                
+                if (numStack.size() < 2) {
+                    throw runtime_error("表达式格式错误（数字不足）");
+                }
+                double num2 = numStack.top();
+                numStack.pop();
+                double num1 = numStack.top();
+                numStack.pop();
+                
+                double res = calculate(num1, num2, op);
+                numStack.push(res);
+            }
+            
+            opStack.push(expr[i]);
+            i++;
+        }
+        
+        // 6. 无效字符
+        else {
+            throw runtime_error("表达式包含无效字符：" + string(1, expr[i]));
+        }
+    }
+    
+    // 7. 处理栈中剩余的运算符
+    while (!opStack.empty()) {
+        char op = opStack.top();
+        opStack.pop();
+        
+        if (numStack.size() < 2) {
+            throw runtime_error("表达式格式错误（数字不足）");
+        }
+        double num2 = numStack.top();
+        numStack.pop();
+        double num1 = numStack.top();
+        numStack.pop();
+        
+        double res = calculate(num1, num2, op);
+        numStack.push(res);
+    }
+    
+    // 8. 检查结果是否唯一
+    if (numStack.size() != 1) {
+        throw runtime_error("表达式格式错误（结果不唯一）");
+    }
+    
+    return numStack.top();
+}
+
+// 主函数测试
+int main() {
+    cout << "=== 字符串计算器测试 ===" << endl;
+    // 测试案例
+    vector<string> testExprs = {
+        "3+5*2",          // 预期结果：13
+        "(3+5)*2",        // 预期结果：16
+        "10-2/2",         // 预期结果：9
+        "3.5+2.5*4",      // 预期结果：13.5
+        "((1+2)*(3-4))/2",// 预期结果：-1.5
+        "5/0",            // 预期错误：除数为0
+        "3+*5",           // 预期错误：表达式格式错误
+        "10-(2+3)*2"      // 预期结果：0
+    };
+    
+    for (const auto& expr : testExprs) {
+        cout << "表达式：" << expr << " -> ";
+        try {
+            double result = stringCalculator(expr);
+            cout << "结果：" << result << endl;
+        } catch (const runtime_error& e) {
+            cout << "错误：" << e.what() << endl;
+        }
+    }
+    
+    return 0;
+}
